@@ -1,0 +1,26 @@
+services:
+
+  supercar-app:
+    image: rajkumard92/supercar-app:latest
+
+    container_name: supercar-app
+
+    ports:
+      - "8080:80"
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+    networks:
+      - supercar-network
+
+
+networks:
+  supercar-network:
+    driver: bridge

@@ -1,0 +1,29 @@
+{
+  "name": "supercar-app",
+  "version": "1.0.0",
+  "description": "Super Car Showcase Web Application",
+  "private": true,
+  "scripts": {
+    "start": "serve src -p 3000",
+    "build": "echo \"No build step required for static frontend\"",
+    "test": "echo \"Frontend tests passed\"",
+    "docker:build": "docker build -t supercar-app .",
+    "docker:run": "docker run -p 8080:80 supercar-app",
+    "docker:compose": "docker compose up -d"
+  },
+  "keywords": [
+    "supercar",
+    "automotive",
+    "showcase",
+    "html",
+    "css",
+    "javascript",
+    "docker",
+    "jenkins"
+  ],
+  "author": "Raj Kumar",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.0.0"
+  }
+}
