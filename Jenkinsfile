@@ -4,7 +4,7 @@ pipeline {
 
     environment {
         DOCKER_REGISTRY = 'rajkumard92'
-        IMAGE_NAME = 'supercar-app'
+        IMAGE_NAME = 'car-app-demo'
         DOCKER_TAG = "${BUILD_NUMBER}"
     }
 
