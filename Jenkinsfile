@@ -170,38 +170,34 @@ pipeline {
 
 
         stage('Deploy') {
-            steps {
-                script {
+    steps {
+        script {
+            echo '========================================'
+            echo 'Deploying application'
+            echo '========================================'
 
-                    echo '========================================'
-                    echo 'Deploying application'
-                    echo '========================================'
+            sh '''
+                echo "Pulling latest Docker image..."
+                docker pull ${DOCKER_IMAGE}:latest
 
-                    sh '''
-                        echo "Pulling latest Docker image..."
+                echo "Stopping old application..."
+                docker compose down || true
 
-                        docker pull ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest
+                echo "Starting new application..."
+                docker compose up -d
 
-                        echo "Stopping old application if running..."
+                echo "Checking running containers..."
+                docker ps
 
-                        docker compose down || true
+                echo "Testing application..."
+                sleep 5
+                curl -f http://localhost:8081/
 
-                        echo "Starting new application..."
-
-                        docker compose up -d
-
-                        echo ""
-                        echo "Running containers:"
-                        docker compose ps
-
-                        echo ""
-                        echo "Application deployed successfully"
-                    '''
-                }
-            }
+                echo "Application deployed successfully!"
+            '''
         }
     }
-
+}
 
     post {
 
