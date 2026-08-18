@@ -21,7 +21,7 @@ pipeline {
                 echo 'Source code checkout completed'
             }
         }
-
+    }
 
         stage('Validate Source') {
             steps {
