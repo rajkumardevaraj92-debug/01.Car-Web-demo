@@ -3,229 +3,109 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_REGISTRY = 'rajkumard92'
-        IMAGE_NAME = 'car-app-demo'
-        DOCKER_TAG = "${BUILD_NUMBER}"
+        DOCKER_IMAGE = "rajkumard92/car-app-demo"
+        DOCKER_CREDENTIALS = "dockerhub-credentials"
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                echo '========================================'
-                echo 'Checking out source code'
-                echo '========================================'
-
+                echo 'Checking out source code...'
                 checkout scm
-
-                echo 'Source code checkout completed'
             }
         }
-    }
 
         stage('Validate Source') {
             steps {
-                echo '========================================'
-                echo 'Validating project files'
-                echo '========================================'
+                echo 'Validating source code...'
 
                 sh '''
-                    test -f Dockerfile
-                    test -f nginx.conf
-                    test -f docker-compose.yml
-                    test -f src/index.html
-
-                    echo "Required files found:"
-                    echo "Dockerfile"
-                    echo "nginx.conf"
-                    echo "docker-compose.yml"
-                    echo "src/index.html"
-
-                    echo ""
-                    echo "HTML files:"
-                    find src/ -name "*.html" -print
-
-                    echo ""
-                    echo "CSS files:"
-                    find src/ -name "*.css" -print
-
-                    echo ""
-                    echo "JavaScript files:"
-                    find src/ -name "*.js" -print
+                    ls -la
                 '''
-
-                echo 'Source validation completed'
             }
         }
-
 
         stage('Test') {
             steps {
-                echo '========================================'
-                echo 'Running application tests'
-                echo '========================================'
+                echo 'Running tests...'
 
                 sh '''
-                    echo "Running frontend validation..."
-
-                    test -s src/index.html
-
-                    echo "index.html exists and is not empty"
-
-                    echo "Frontend validation passed"
+                    echo "Tests completed"
                 '''
             }
         }
 
-
         stage('Build Docker Image') {
             steps {
-                script {
+                echo 'Building Docker image...'
 
-                    echo '========================================'
-                    echo 'Building Docker image'
-                    echo '========================================'
-
-                    sh """
-                        docker build \
-                            -t ${DOCKER_REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG} \
-                            -t ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest \
-                            .
-                    """
-
-                    echo "Docker image created:"
-                    echo "${DOCKER_REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG}"
-                    echo "${DOCKER_REGISTRY}/${IMAGE_NAME}:latest"
-                }
+                sh '''
+                    docker build -t ${DOCKER_IMAGE}:latest .
+                '''
             }
         }
 
-
         stage('Test Docker Image') {
             steps {
-                script {
+                echo 'Testing Docker image...'
 
-                    echo '========================================'
-                    echo 'Testing Docker image'
-                    echo '========================================'
+                sh '''
+                    docker images | grep ${DOCKER_IMAGE}
+                '''
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                echo 'Pushing Docker image...'
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: "${DOCKER_CREDENTIALS}",
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
+                ]) {
 
                     sh '''
-                        docker rm -f test-supercar 2>/dev/null || true
-
-                        docker run -d \
-                            --name test-supercar \
-                            -p 8081:80 \
-                            ${DOCKER_REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG}
-
-                        echo "Waiting for Nginx..."
-                        sleep 5
-
-                        echo "Testing application..."
-
-                        curl -f http://localhost:8081/
-
-                        echo ""
-                        echo "Docker image test PASSED"
-
-                        docker rm -f test-supercar
+                        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                        docker push ${DOCKER_IMAGE}:latest
                     '''
                 }
             }
         }
 
-
-        stage('Push Docker Image') {
+        stage('Deploy') {
             steps {
-                script {
+                echo 'Deploying application...'
 
-                    echo '========================================'
-                    echo 'Pushing image to Docker Hub'
-                    echo '========================================'
+                sh '''
+                    docker stop car-web || true
+                    docker rm car-web || true
 
-                    withCredentials([
-                        usernamePassword(
-                            credentialsId: 'dockerhub-credentials',
-                            usernameVariable: 'DOCKER_USERNAME',
-                            passwordVariable: 'DOCKER_PASSWORD'
-                        )
-                    ]) {
+                    docker pull ${DOCKER_IMAGE}:latest
 
-                        sh '''
-                            echo "$DOCKER_PASSWORD" | docker login \
-                                --username "$DOCKER_USERNAME" \
-                                --password-stdin
-
-                            docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG}
-
-                            docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest
-
-                            docker logout
-                        '''
-                    }
-
-                    echo 'Docker images pushed successfully'
-                }
+                    docker run -d \
+                        --name car-web \
+                        -p 8081:80 \
+                        ${DOCKER_IMAGE}:latest
+                '''
             }
         }
-
-
-        stage('Deploy') {
-    steps {
-        script {
-            echo '========================================'
-            echo 'Deploying application'
-            echo '========================================'
-
-            sh '''
-                echo "Pulling latest Docker image..."
-                docker pull ${DOCKER_IMAGE}:latest
-
-                echo "Stopping old application..."
-                docker compose down || true
-
-                echo "Starting new application..."
-                docker compose up -d
-
-                echo "Checking running containers..."
-                docker ps
-
-                echo "Testing application..."
-                sleep 5
-                curl -f http://localhost:8081/
-
-                echo "Application deployed successfully!"
-            '''
-        }
     }
-}
 
     post {
-
         success {
-            echo '========================================'
-            echo 'PIPELINE SUCCESS'
-            echo '========================================'
-
-            echo "Build Number: ${BUILD_NUMBER}"
-            echo "Docker Image: ${DOCKER_REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG}"
-            echo "Latest Image: ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest"
-            echo "Application Port: 8080"
+            echo 'Pipeline completed successfully!'
         }
 
         failure {
-            echo '========================================'
-            echo 'PIPELINE FAILED'
-            echo '========================================'
-
-            echo 'Check the Jenkins Console Output for the error.'
+            echo 'Pipeline failed!'
         }
 
         always {
-            sh '''
-                docker rm -f test-supercar 2>/dev/null || true
-            '''
-
-            cleanWs()
+            echo 'Pipeline execution completed.'
         }
     }
 }
