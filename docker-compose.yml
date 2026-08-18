@@ -1,12 +1,12 @@
 services:
 
   supercar-app:
-    image: rajkumard92/supercar-app:latest
+    image: rajkumard92/car-app-demo:latest
 
     container_name: supercar-app
 
     ports:
-      - "8080:80"
+      - "8081:80"
 
     restart: unless-stopped
 
